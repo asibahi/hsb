@@ -1,0 +1,8 @@
+[package]
+name = "hsb"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.3.12", features = ["cargo"] }
+colored = "2.0.4"
