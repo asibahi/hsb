@@ -1,10 +1,10 @@
 use clap::Parser;
-use hsb::Commands::*;
+use hsb::*;
 
 fn main() {
-    let cli = hsb::Cli::parse();
+    let cli = Cli::parse();
     match cli.command {
-        Vat(args) => hsb::vat::run(args),
-        Salary(args) => hsb::salary::run(args),
+        Commands::Vat(args) => vat::run(args),
+        Commands::Salary(args) => salary::run(args),
     }
 }
