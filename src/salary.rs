@@ -9,8 +9,9 @@ const MONTHLY_FEES: f64 = ANNUAL_FEES / 12.0;
 
 #[derive(Args)]
 pub struct SalaryArgs {
-    /// amount of fullm final package.
+    /// amount of full, final package.
     package: usize,
+    
     /// Use daily pay as basis for calculation.
     #[arg(short, long)]
     daily: bool,
@@ -22,7 +23,7 @@ pub struct SalaryArgs {
 
 pub fn run(args: SalaryArgs) {
     let pack = args.package;
-    
+
     // making adjustments for the optional flags.
     let pack = if args.daily { pack * 24 } else { pack } as f64;
     let pack = if args.fees { pack - MONTHLY_FEES } else { pack };
