@@ -1,20 +1,28 @@
 use clap::{Parser, Subcommand};
 
-pub mod salary;
-pub mod vat;
+mod salary;
+mod vat;
 
 #[derive(Parser)]
 #[command(author, version)]
-pub struct Cli {
+struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    command: Commands,
 }
 
 #[derive(Subcommand)]
-pub enum Commands {
+enum Commands {
     /// Get value without VAT from a final value with VAT
     Vat(vat::VatArgs),
 
     /// Get salary devisions from a final salary
     Salary(salary::SalaryArgs),
+}
+
+pub fn run() {
+    let cli = Cli::parse();
+    match cli.command {
+        Commands::Vat(args) => vat::run(args),
+        Commands::Salary(args) => salary::run(args),
+    }
 }
