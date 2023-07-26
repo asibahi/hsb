@@ -443,9 +443,3 @@ pub struct Authorization {
     pub expires_in: i64,
     token_type: String,
 }
-
-#[derive(Deserialize)]
-pub struct Credentials {
-   pub blizzard_client_id: String,
-   pub blizzard_client_secret: String,
-}
