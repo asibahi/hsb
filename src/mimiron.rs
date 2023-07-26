@@ -1,10 +1,7 @@
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine};
 use clap::Args;
-
 mod types;
-
-const CREDS: &str = "Credentials.toml";
 
 #[derive(Args)]
 pub struct MimironArgs {
@@ -14,7 +11,7 @@ pub struct MimironArgs {
 }
 
 pub fn run(args: MimironArgs) -> Result<()> {
-    let creds = get_creds_from_file()?;
+    let creds = get_creds_from_env()?;
 
     let access_token = ureq::post("https://oauth.battle.net/token")
         .set("Authorization", &format!("Basic {}", creds))
@@ -38,15 +35,10 @@ pub fn run(args: MimironArgs) -> Result<()> {
     Ok(())
 }
 
-fn get_creds_from_file() -> Result<String, anyhow::Error> {
-    let creds = std::fs::read_to_string(CREDS)?;
-    let creds: types::Credentials = toml::from_str(&creds)?;
-    let creds = general_purpose::STANDARD_NO_PAD.encode(
-        format!(
-            "{}:{}",
-            creds.blizzard_client_id, creds.blizzard_client_secret
-        )
-        .as_bytes(),
-    );
+fn get_creds_from_env() -> Result<String, anyhow::Error> {
+    dotenvy::dotenv()?;
+    let id = std::env::var("BLIZZARD_CLIENT_ID")?;
+    let secret = std::env::var("BLIZZARD_CLIENT_SECRET")?;
+    let creds = general_purpose::STANDARD_NO_PAD.encode(format!("{}:{}", id, secret).as_bytes());
     Ok(creds)
 }
