@@ -324,8 +324,9 @@ pub struct Card {
     pub text: String,
 
     pub dup: bool,
-    /*
-    image: String,
+    
+    pub image: String,
+    /* 
     crop_image: String,
 
     tokens: HashSet<usize>,
@@ -359,9 +360,11 @@ impl Display for Card {
 
         let card_info = &self.card_type;
 
+        let img = &self.image;
+
         write!(
             f,
-            "{name}({id}): {rarity} {class} {runes}{cost} mana {card_info} from set {set}.\n{text}"
+            "{name}({id}): {rarity} {class} {runes}{cost} mana {card_info} from set {set}.\n{text}\nImage: {img}"
         )
     }
 }
@@ -415,8 +418,9 @@ impl TryFrom<CardData> for Card {
             text: c.text,
 
             dup: c.copy_of_card_id.is_some(),
-            /*
+            
             image: c.image,
+            /* 
             crop_image: c.crop_image,
             tokens: match c.child_ids {
                 Some(v) => HashSet::from_iter(v),
