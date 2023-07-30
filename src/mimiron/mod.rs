@@ -1,7 +1,10 @@
 use anyhow::Result;
-use base64::{engine::general_purpose, Engine};
 use clap::Args;
-mod types;
+
+mod authorization;
+mod card;
+mod card_details;
+mod deck;
 
 #[derive(Args)]
 pub struct MimironArgs {
@@ -25,8 +28,8 @@ struct MimironModes {
 }
 
 pub fn run(args: MimironArgs) -> Result<()> {
-    let creds = get_creds_from_env()?;
-    let access_token = get_access_token(creds)?;
+    let creds = authorization::get_creds_from_env()?;
+    let access_token = authorization::get_access_token(creds)?;
 
     let mode = args.mode;
     if mode.token {
@@ -37,11 +40,11 @@ pub fn run(args: MimironArgs) -> Result<()> {
             .query("textFilter", &card_name.join(" "))
             .query("access_token", &access_token)
             .call()?
-            .into_json::<types::CardSearchResponse>()?
+            .into_json::<card::CardSearchResponse>()?
             .cards;
 
         for card in res.into_iter().filter(|c| !c.dup).take(5) {
-            println!("{:#}", card);
+            println!("{card:#}");
         }
     } else if let Some(deck_string) = mode.deck {
         let res = ureq::get("https://us.api.blizzard.com/hearthstone/deck")
@@ -49,28 +52,10 @@ pub fn run(args: MimironArgs) -> Result<()> {
             .query("code", &deck_string)
             .query("access_token", &access_token)
             .call()?
-            .into_json::<types::Deck>()?;
+            .into_json::<deck::Deck>()?;
 
         println!("{res}");
     }
 
     Ok(())
-}
-
-fn get_access_token(creds: String) -> Result<String, anyhow::Error> {
-    let access_token = ureq::post("https://oauth.battle.net/token")
-        .set("Authorization", &format!("Basic {}", creds))
-        .query("grant_type", "client_credentials")
-        .call()?
-        .into_json::<types::Authorization>()?
-        .access_token;
-    Ok(access_token)
-}
-
-fn get_creds_from_env() -> Result<String, anyhow::Error> {
-    dotenvy::dotenv()?;
-    let id = std::env::var("BLIZZARD_CLIENT_ID")?;
-    let secret = std::env::var("BLIZZARD_CLIENT_SECRET")?;
-    let creds = general_purpose::STANDARD_NO_PAD.encode(format!("{}:{}", id, secret).as_bytes());
-    Ok(creds)
 }
