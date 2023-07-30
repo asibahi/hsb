@@ -1,3 +1,3 @@
-fn main() -> anyhow::Result<()> {
+fn main()  {
     hsb::run()
 }
