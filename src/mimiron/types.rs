@@ -1,9 +1,14 @@
 use anyhow::{anyhow, Result};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, fmt::Display, iter};
+use std::{
+    collections::{BTreeMap, HashSet},
+    fmt::Display,
+    iter,
+};
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Deserialize)]
+#[serde(try_from = "ClassData")]
 pub enum Class {
     DeathKnight,
     DemonHunter,
@@ -57,13 +62,26 @@ impl TryFrom<u8> for Class {
         }
     }
 }
+impl TryFrom<ClassData> for Class {
+    type Error = anyhow::Error;
 
+    fn try_from(value: ClassData) -> Result<Self> {
+        value.id.try_into()
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ClassData {
+    id: u8,
+}
+
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum Rarity {
+    Legendary,
+    Epic,
+    Rare,
     Common,
     Free,
-    Rare,
-    Epic,
-    Legendary,
 }
 impl Display for Rarity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -207,55 +225,6 @@ impl Display for RuneCost {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CardData {
-    // Unique identifiers
-    id: usize,
-    slug: String,
-
-    // basic info
-    collectible: u8,
-
-    card_type_id: u8,
-    class_id: u8,
-    multi_class_ids: Vec<u8>,
-
-    rarity_id: u8,
-    card_set_id: usize,
-
-    name: String,
-    text: String,
-
-    // Stats
-    mana_cost: u8,
-    rune_cost: Option<RuneCost>,
-
-    attack: Option<u8>,
-    health: Option<u8>,
-    durability: Option<u8>,
-    armor: Option<u8>,
-
-    // Additional Info
-    minion_type_id: Option<u8>,
-    multi_type_ids: Option<Vec<u8>>,
-
-    spell_school_id: Option<u8>,
-
-    // Flavor
-    artist_name: String,
-    image: String,
-    flavor_text: String,
-    crop_image: String,
-
-    // Related cards
-    parent_id: usize,
-    copy_of_card_id: Option<usize>,
-    child_ids: Option<Vec<usize>>,
-
-    keyword_ids: Option<Vec<i64>>,
-}
-
 pub enum CardType {
     Hero {
         armor: u8,
@@ -306,6 +275,55 @@ impl Display for CardType {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CardData {
+    // Unique identifiers
+    id: usize,
+    slug: String,
+
+    // basic info
+    collectible: u8,
+
+    card_type_id: u8,
+    class_id: u8,
+    multi_class_ids: Vec<u8>,
+
+    rarity_id: u8,
+    card_set_id: usize,
+
+    name: String,
+    text: String,
+
+    // Stats
+    mana_cost: u8,
+    rune_cost: Option<RuneCost>,
+
+    attack: Option<u8>,
+    health: Option<u8>,
+    durability: Option<u8>,
+    armor: Option<u8>,
+
+    // Additional Info
+    minion_type_id: Option<u8>,
+    multi_type_ids: Option<Vec<u8>>,
+
+    spell_school_id: Option<u8>,
+
+    // Flavor
+    artist_name: String,
+    image: String,
+    flavor_text: String,
+    crop_image: Option<String>,
+
+    // Related cards
+    parent_id: usize,
+    copy_of_card_id: Option<usize>,
+    child_ids: Option<Vec<usize>>,
+
+    keyword_ids: Option<Vec<i64>>,
+}
+
 #[derive(Deserialize)]
 #[serde(try_from = "CardData")]
 pub struct Card {
@@ -324,9 +342,9 @@ pub struct Card {
     pub text: String,
 
     pub dup: bool,
-    
+
     pub image: String,
-    /* 
+    /*
     crop_image: String,
 
     tokens: HashSet<usize>,
@@ -334,10 +352,47 @@ pub struct Card {
     flavor_text: String,
     */
 }
+
+impl PartialEq for Card {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl PartialOrd for Card {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self.rarity.partial_cmp(&other.rarity) {
+            Some(core::cmp::Ordering::Equal) => {}
+            ord => return ord,
+        }
+        match self.cost.partial_cmp(&other.cost) {
+            Some(core::cmp::Ordering::Equal) => {}
+            ord => return ord,
+        }
+        self.name.partial_cmp(&other.name)
+    }
+}
+impl std::hash::Hash for Card {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+impl Eq for Card {}
+impl Ord for Card {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.rarity.cmp(&other.rarity) {
+            core::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+        match self.cost.cmp(&other.cost) {
+            core::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+        self.name.cmp(&other.name)
+    }
+}
 impl Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = self.name.bold();
-        let id = self.id;
         let cost = self.cost;
 
         let runes = match &self.rune_cost {
@@ -364,8 +419,13 @@ impl Display for Card {
 
         write!(
             f,
-            "{name}({id}): {rarity} {class} {runes}{cost} mana {card_info} from set {set}.\n{text}\nImage: {img}"
-        )
+            "{name:25} {rarity} {class} {runes}{cost} mana {card_info}."
+        )?;
+
+        if f.alternate() {
+            write!(f, "Set {set}.\n{text}\nImage: {img}")?;
+        }
+        Ok(())
     }
 }
 impl TryFrom<CardData> for Card {
@@ -418,9 +478,9 @@ impl TryFrom<CardData> for Card {
             text: c.text,
 
             dup: c.copy_of_card_id.is_some(),
-            
+
             image: c.image,
-            /* 
+            /*
             crop_image: c.crop_image,
             tokens: match c.child_ids {
                 Some(v) => HashSet::from_iter(v),
@@ -436,7 +496,78 @@ impl TryFrom<CardData> for Card {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Response {
+pub struct Sideboard {
+    sideboard_card: Card,
+    cards_in_sideboard: Vec<Card>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Deck {
+    deck_code: String,
+    format: String,
+    class: Class,
+    cards: Vec<Card>,
+    // card_count: usize,
+    sideboard_cards: Option<Vec<Sideboard>>,
+}
+impl Display for Deck {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = &self.deck_code;
+        let class = &self.class.to_string().bold();
+        let format = &self.format;
+        writeln!(f, "{format} {class} deck.\n{code}")?;
+
+        if self.sideboard_cards.is_some() {
+            writeln!(f, "Main Deck:")?;
+        }
+
+        let cards = self.cards.iter().fold(BTreeMap::new(), |mut acc, c| {
+            *acc.entry(c).or_insert(0) += 1;
+            acc
+        });
+
+        for (card, count) in cards {
+            let count = if count == 1 {
+                String::new()
+            } else {
+                format!("{count}x")
+            };
+            writeln!(f, "{count:4} {card}")?;
+        }
+
+        if let Some(sideboards) = &self.sideboard_cards {
+            for sideboard in sideboards {
+                let sideboard_name = &sideboard.sideboard_card.name;
+                writeln!(f, "Sideboard of {sideboard_name}:")?;
+
+                let cards =
+                    sideboard
+                        .cards_in_sideboard
+                        .iter()
+                        .fold(BTreeMap::new(), |mut acc, c| {
+                            *acc.entry(c).or_insert(0) += 1;
+                            acc
+                        });
+
+                for (card, count) in cards {
+                    let count = if count == 1 {
+                        String::new()
+                    } else {
+                        format!("{count}x")
+                    };
+                    writeln!(f, "{count:4} {card}")?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardSearchResponse {
     pub cards: Vec<Card>,
     // card_count: usize,
 }
