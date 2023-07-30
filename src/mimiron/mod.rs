@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Args;
+use itertools::Itertools;
 
 mod authorization;
 mod card;
@@ -23,8 +24,9 @@ struct MimironModes {
     #[arg(short, long)]
     deck: Option<String>,
 
+    /// get access token to test API. for development purposes. Should I use #[cfg(debug_assertions) ?
     #[arg(short)]
-    token: bool,
+    token: bool, // remove before release hah !!
 }
 
 pub fn run(args: MimironArgs) -> Result<()> {
@@ -34,19 +36,25 @@ pub fn run(args: MimironArgs) -> Result<()> {
     let mode = args.mode;
     if mode.token {
         println!("{access_token}")
-    } else if let Some(card_name) = mode.card_name {
+    } else if let Some(search_term) = mode.card_name {
+        // Card Search
         let res = ureq::get("https://us.api.blizzard.com/hearthstone/cards")
             .query("locale", "en_us")
-            .query("textFilter", &card_name.join(" "))
+            .query("textFilter", &search_term.join(" "))
             .query("access_token", &access_token)
             .call()?
-            .into_json::<card::CardSearchResponse>()?
-            .cards;
+            .into_json::<card::CardSearchResponse>()?;
 
-        for card in res.into_iter().filter(|c| !c.dup).take(5) {
-            println!("{card:#}");
+        if res.card_count > 0 {
+            let cards = res.cards.into_iter().unique_by(|c| c.name.clone()).take(5);
+            for card in cards {
+                println!("{card:#}");
+            }
+        } else {
+            println!("No card found. Check your spelling.")
         }
     } else if let Some(deck_string) = mode.deck {
+        // Deck Code
         let res = ureq::get("https://us.api.blizzard.com/hearthstone/deck")
             .query("locale", "en_us")
             .query("code", &deck_string)

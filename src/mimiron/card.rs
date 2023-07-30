@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use colored::Colorize;
 use serde::Deserialize;
 use std::{collections::HashSet, fmt::Display, iter};
@@ -41,21 +40,21 @@ struct CardData {
     spell_school_id: Option<u8>,
 
     // Flavor
-    //artist_name: String,
     image: String,
+    //artist_name: String,
     //flavor_text: String,
     //crop_image: Option<String>,
 
     // Related cards
+    //copy_of_card_id: Option<usize>,
     //parent_id: usize,
-    copy_of_card_id: Option<usize>,
     //child_ids: Option<Vec<usize>>,
 
     //keyword_ids: Option<Vec<i64>>,
 }
 
 #[derive(Deserialize)]
-#[serde(try_from = "CardData")]
+#[serde(from = "CardData")]
 pub struct Card {
     pub id: usize,
     pub card_set: usize,
@@ -70,8 +69,6 @@ pub struct Card {
     pub rarity: Rarity,
 
     pub text: String,
-
-    pub dup: bool,
 
     pub image: String,
     /*
@@ -140,8 +137,7 @@ impl Display for Card {
             .iter()
             .map(|x| x.to_string())
             .collect::<Vec<_>>()
-            .join("/")
-            .green();
+            .join("/");
 
         let card_info = &self.card_type;
 
@@ -158,21 +154,19 @@ impl Display for Card {
         Ok(())
     }
 }
-impl TryFrom<CardData> for Card {
-    type Error = anyhow::Error;
-
-    fn try_from(c: CardData) -> Result<Self> {
-        let c = Card {
+impl From<CardData> for Card {
+    fn from(c: CardData) -> Self {
+        Card {
             id: c.id,
             card_set: c.card_set_id,
             name: c.name,
             class: if c.multi_class_ids.is_empty() {
-                HashSet::from([c.class_id.try_into()?])
+                HashSet::from([c.class_id.into()])
             } else {
                 c.multi_class_ids
                     .into_iter()
-                    .map(Class::try_from)
-                    .collect::<Result<HashSet<_>>>()?
+                    .map(Class::from)
+                    .collect::<HashSet<_>>()
             },
             cost: c.mana_cost,
             rune_cost: c.rune_cost,
@@ -185,15 +179,15 @@ impl TryFrom<CardData> for Card {
                     health: c.health.unwrap(),
                     minion_types: match (c.minion_type_id, c.multi_type_ids) {
                         (None, _) => HashSet::new(),
-                        (Some(t), None) => HashSet::from([t.try_into()?]),
+                        (Some(t), None) => HashSet::from([t.into()]),
                         (Some(t), Some(v)) => iter::once(t)
                             .chain(v)
-                            .map(MinionType::try_from)
-                            .collect::<Result<HashSet<_>>>()?,
+                            .map(MinionType::from)
+                            .collect::<HashSet<_>>(),
                     },
                 },
                 5 => CardType::Spell {
-                    school: c.spell_school_id.map(SpellSchool::try_from).transpose()?,
+                    school: c.spell_school_id.map(SpellSchool::from),
                 },
                 7 => CardType::Weapon {
                     attack: c.attack.unwrap(),
@@ -202,12 +196,10 @@ impl TryFrom<CardData> for Card {
                 39 => CardType::Location {
                     durability: c.durability.unwrap(),
                 },
-                _ => return Err(anyhow!("Card type does not exist")),
+                _ => CardType::Unknown,
             },
-            rarity: c.rarity_id.try_into()?,
+            rarity: c.rarity_id.into(),
             text: c.text,
-
-            dup: c.copy_of_card_id.is_some(),
 
             image: c.image,
             /*
@@ -218,9 +210,7 @@ impl TryFrom<CardData> for Card {
             },
             flavor_text: c.flavor_text,
             */
-        };
-
-        Ok(c)
+        }
     }
 }
 
@@ -228,5 +218,5 @@ impl TryFrom<CardData> for Card {
 #[serde(rename_all = "camelCase")]
 pub struct CardSearchResponse {
     pub cards: Vec<Card>,
-    // card_count: usize,
+    pub card_count: usize,
 }

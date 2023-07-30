@@ -1,16 +1,18 @@
-use anyhow::{anyhow, Result};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Display};
 
+#[allow(dead_code)]
 #[derive(PartialEq, Eq, Hash, Deserialize)]
-#[serde(try_from = "ClassData")]
+#[serde(from = "ClassData")]
 pub enum Class {
     DeathKnight,
     DemonHunter,
     Druid,
+    Evoker,
     Hunter,
     Mage,
+    Monk,
     Paladin,
     Priest,
     Rogue,
@@ -18,51 +20,55 @@ pub enum Class {
     Warlock,
     Warrior,
     Neutral,
+    Unknown,
 }
 impl Display for Class {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            Class::DeathKnight => "DeathKnight",
-            Class::DemonHunter => "DemonHunter",
-            Class::Druid => "Druid",
-            Class::Hunter => "Hunter",
-            Class::Mage => "Mage",
-            Class::Paladin => "Paladin",
-            Class::Priest => "Priest",
-            Class::Rogue => "Rogue",
-            Class::Shaman => "Shaman",
-            Class::Warlock => "Warlock",
-            Class::Warrior => "Warrior",
-            Class::Neutral => "Neutral",
+            // colors from WoW. Couldn't find info on Hearthstone colors.
+            Class::DeathKnight => "DeathKnight".truecolor(196, 30, 6),
+            Class::DemonHunter => "DemonHunter".truecolor(163, 48, 201),
+            Class::Druid => "Druid".truecolor(255, 124, 10),
+            Class::Evoker => "Evoker".truecolor(51, 147, 127),
+            Class::Hunter => "Hunter".truecolor(170, 211, 114),
+            Class::Mage => "Mage".truecolor(63, 199, 235),
+            Class::Monk => "Monk".truecolor(0, 255, 152),
+            Class::Paladin => "Paladin".truecolor(244, 140, 186),
+            Class::Priest => "Priest".white(),
+            Class::Rogue => "Rogue".truecolor(255, 244, 104),
+            Class::Shaman => "Shaman".truecolor(0, 112, 221),
+            Class::Warlock => "Warlock".truecolor(135, 136, 238),
+            Class::Warrior => "Warrior".truecolor(198, 155, 109),
+            Class::Neutral => "Neutral".clear(),
+            Class::Unknown => "UNKNOWN".clear(),
         };
         write!(f, "{s}")
     }
 }
-impl TryFrom<u8> for Class {
-    type Error = anyhow::Error;
-    fn try_from(value: u8) -> Result<Self> {
+impl From<u8> for Class {
+    fn from(value: u8) -> Self {
         match value {
-            1 => Ok(Class::DeathKnight),
-            14 => Ok(Class::DemonHunter),
-            2 => Ok(Class::Druid),
-            3 => Ok(Class::Hunter),
-            4 => Ok(Class::Mage),
-            5 => Ok(Class::Paladin),
-            6 => Ok(Class::Priest),
-            7 => Ok(Class::Rogue),
-            8 => Ok(Class::Shaman),
-            9 => Ok(Class::Warlock),
-            10 => Ok(Class::Warrior),
-            12 => Ok(Class::Neutral),
-            _ => Err(anyhow!("Class does not exist.")),
+            1 => Class::DeathKnight,
+            14 => Class::DemonHunter,
+            2 => Class::Druid,
+            // placeholder => Class::Evoker,
+            3 => Class::Hunter,
+            4 => Class::Mage,
+            // placeholder => Class::Monk,
+            5 => Class::Paladin,
+            6 => Class::Priest,
+            7 => Class::Rogue,
+            8 => Class::Shaman,
+            9 => Class::Warlock,
+            10 => Class::Warrior,
+            12 => Class::Neutral,
+            _ => Class::Unknown,
         }
     }
 }
-impl TryFrom<ClassData> for Class {
-    type Error = anyhow::Error;
-
-    fn try_from(value: ClassData) -> Result<Self> {
-        value.id.try_into()
+impl From<ClassData> for Class {
+    fn from(value: ClassData) -> Self {
+        value.id.into()
     }
 }
 
@@ -78,6 +84,7 @@ pub enum Rarity {
     Rare,
     Common,
     Free,
+    Unknown,
 }
 impl Display for Rarity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -86,23 +93,22 @@ impl Display for Rarity {
             Rarity::Free => "free".white(),
             Rarity::Rare => "rare".blue(),
             Rarity::Epic => "epic".purple(),
-            Rarity::Legendary => "Legendary".bright_yellow().bold(),
+            Rarity::Legendary => "LEGENDARY".bright_yellow().bold(),
+            Rarity::Unknown => "UNKNOWN".clear(),
         }
         .italic();
         write!(f, "{r}")
     }
 }
-impl TryFrom<u8> for Rarity {
-    type Error = anyhow::Error;
-
-    fn try_from(value: u8) -> Result<Self> {
+impl From<u8> for Rarity {
+    fn from(value: u8) -> Self {
         match value {
-            1 => Ok(Rarity::Common),
-            2 => Ok(Rarity::Free),
-            3 => Ok(Rarity::Rare),
-            4 => Ok(Rarity::Epic),
-            5 => Ok(Rarity::Legendary),
-            _ => Err(anyhow!("Rarity does not exist")),
+            1 => Rarity::Common,
+            2 => Rarity::Free,
+            3 => Rarity::Rare,
+            4 => Rarity::Epic,
+            5 => Rarity::Legendary,
+            _ => Rarity::Unknown,
         }
     }
 }
@@ -116,6 +122,7 @@ pub enum SpellSchool {
     Holy,
     Shadow,
     Fel,
+    Unknown,
 }
 impl Display for SpellSchool {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -127,24 +134,23 @@ impl Display for SpellSchool {
             SpellSchool::Holy => "Holy",
             SpellSchool::Shadow => "Shadow",
             SpellSchool::Fel => "Fel",
+            SpellSchool::Unknown => "UNKNOWN",
         };
 
         write!(f, "{s}")
     }
 }
-impl TryFrom<u8> for SpellSchool {
-    type Error = anyhow::Error;
-
-    fn try_from(value: u8) -> Result<Self> {
+impl From<u8> for SpellSchool {
+    fn from(value: u8) -> Self {
         match value {
-            1 => Ok(SpellSchool::Arcane),
-            2 => Ok(SpellSchool::Fire),
-            3 => Ok(SpellSchool::Frost),
-            4 => Ok(SpellSchool::Nature),
-            5 => Ok(SpellSchool::Holy),
-            6 => Ok(SpellSchool::Shadow),
-            7 => Ok(SpellSchool::Fel),
-            _ => Err(anyhow!("Spell School doesn't exist")),
+            1 => SpellSchool::Arcane,
+            2 => SpellSchool::Fire,
+            3 => SpellSchool::Frost,
+            4 => SpellSchool::Nature,
+            5 => SpellSchool::Holy,
+            6 => SpellSchool::Shadow,
+            7 => SpellSchool::Fel,
+            _ => SpellSchool::Unknown,
         }
     }
 }
@@ -163,6 +169,7 @@ pub enum MinionType {
     All,
     Quilboar,
     Naga,
+    Unknown,
 }
 impl Display for MinionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -179,29 +186,30 @@ impl Display for MinionType {
             MinionType::All => "Amalgam",
             MinionType::Quilboar => "Quilboar",
             MinionType::Naga => "Naga",
+            MinionType::Unknown => "UNKNOWN",
         };
 
         write!(f, "{t}")
     }
 }
-impl TryFrom<u8> for MinionType {
-    type Error = anyhow::Error;
+impl From<u8> for MinionType {
+    //   type Error = anyhow::Error;
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+    fn from(value: u8) -> Self {
         match value {
-            11 => Ok(MinionType::Undead),
-            14 => Ok(MinionType::Murloc),
-            15 => Ok(MinionType::Demon),
-            17 => Ok(MinionType::Mech),
-            18 => Ok(MinionType::Elemental),
-            20 => Ok(MinionType::Beast),
-            21 => Ok(MinionType::Totem),
-            23 => Ok(MinionType::Pirate),
-            24 => Ok(MinionType::Dragon),
-            26 => Ok(MinionType::All),
-            43 => Ok(MinionType::Quilboar),
-            92 => Ok(MinionType::Naga),
-            _ => Err(anyhow!("Minion Type not implemented")),
+            11 => MinionType::Undead,
+            14 => MinionType::Murloc,
+            15 => MinionType::Demon,
+            17 => MinionType::Mech,
+            18 => MinionType::Elemental,
+            20 => MinionType::Beast,
+            21 => MinionType::Totem,
+            23 => MinionType::Pirate,
+            24 => MinionType::Dragon,
+            26 => MinionType::All,
+            43 => MinionType::Quilboar,
+            92 => MinionType::Naga,
+            _ => MinionType::Unknown,
         }
     }
 }
@@ -240,6 +248,7 @@ pub enum CardType {
     Location {
         durability: u8,
     },
+    Unknown,
 }
 impl Display for CardType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -267,6 +276,7 @@ impl Display for CardType {
             },
             CardType::Weapon { attack, durability } => write!(f, "{attack}/{durability} weapon"),
             CardType::Location { durability } => write!(f, "{durability} durability location"),
+            CardType::Unknown => write!(f, "UNKNOWN"),
         }
     }
 }
