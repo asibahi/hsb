@@ -1,4 +1,3 @@
-
 use clap::{Parser, Subcommand};
 
 mod salary;
@@ -18,16 +17,12 @@ enum Commands {
 
     /// Get salary devisions from a final salary
     Salary(salary::SalaryArgs),
-
-
 }
 
-pub fn run()  {
+pub fn run() {
     let cli = Cli::parse();
     match cli.command {
         Commands::Vat(args) => vat::run(args),
         Commands::Salary(args) => salary::run(args),
     };
-
-
 }
