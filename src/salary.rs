@@ -45,10 +45,10 @@ pub fn run(args: SalaryArgs) {
     println!(
         "{:20}SAR {}\n{:20}SAR {}\n{:20}SAR {}",
         "Base Salary:",
-        format!("{:.0}", base).bold().green(),
+        format!("{base:.0}").bold().green(),
         "Housing:",
-        format!("{:.0}", hous).bold().green(),
+        format!("{hous:.0}").bold().green(),
         "Transport",
-        format!("{:.0}", tprt).bold().green(),
+        format!("{tprt:.0}").bold().green(),
     );
 }

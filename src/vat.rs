@@ -24,6 +24,6 @@ pub fn run(args: VatArgs) {
         "VAT:",
         vat,
         "Enter:",
-        format!("{:.3}", answer).bold().green()
+        format!("{answer:.3}").bold().green()
     );
 }
